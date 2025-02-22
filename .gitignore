@@ -1,0 +1,13 @@
+# Ignorar node_modules
+node_modules/
+
+# Ignorar archivos de entorno
+.env
+
+# Ignorar archivos generados
+*.log
+*.xlsx
+
+# Ignorar archivos de IDE
+.vscode/
+.idea/
