@@ -1,63 +1,53 @@
-import puppeteer from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
 import xlsx from 'xlsx';
-
-// Ruta del archivo HTML
-const filePath = `file://${path.resolve('C:/Users/acer/Desktop/CopiaUsb/Temu _ Detalles del pedido.html')}`;
+import { obtenerColorYTalla } from './utilidades.js';
 
 // Ruta del archivo Excel
 const excelPath = path.resolve('C:/Users/acer/Desktop/CopiaUsb/productos.xlsx');
 
-async function extraerInfoYGuardar() {
+async function extraerInfoYGuardar(page,filePath) {
     let browser;
     try {
-        // Iniciar Puppeteer
-        browser = await puppeteer.launch({ headless: true });
-        const page = await browser.newPage();
         await page.goto(filePath, { waitUntil: 'domcontentloaded' });
 
         // Extraer datos sin procesar
         const productos = await page.evaluate(() => {
+            function parsearPrecio(textoPrecio) {
+                if (!textoPrecio) return 0;
+                let precioLimpio = textoPrecio.replace(/[$€£¥₱₩₹USD]/g, '') // Quita símbolos de moneda
+                                              .replace(/\./g, '') // Quita puntos de miles
+                                              .replace(/,/g, '') // Quita comas
+                                              .trim();
+        
+                let precioNumerico = parseInt(precioLimpio, 10);
+                return isNaN(precioNumerico) ? 0 : precioNumerico;
+            }
+        
             const productosArray = [];
             const contenedores = document.querySelectorAll('div._1vWYxse2'); // Seleccionar todos los productos
-
+        
             contenedores.forEach(contenedor => {
-                // 🏷️ Extraer descripción
                 const descripcion = contenedor.querySelector('span._2CzqyEwl')?.innerText.trim() || 'Sin descripción';
-
-                // 💰 Extraer el precio
-                let precio = contenedor.querySelector('div._3QXWbu8N')?.innerText.trim() || '0';
-
-                // 🔹 **Eliminar símbolos de moneda y comas**
-                precio = precio.replace(/[^\d.]/g, ''); // Quita TODO excepto números y puntos
-
-                // 🧮 Convertir el precio a número
-                let precioNumerico = parseFloat(precio);
-                if (isNaN(precioNumerico)) precioNumerico = 0; // Si no es válido, poner 0
-
-                // 🎨 Extraer color y talla
+                let textoPrecio = contenedor.querySelector('div._3QXWbu8N')?.innerText.trim() || '0';
+                const precioEntero = parsearPrecio(textoPrecio);
+        
                 const textoColorTalla = contenedor.querySelector('span._2mokkSXY')?.innerText.trim() || 'No especificado';
-
-                // 🔢 Extraer cantidad
                 let cantidad = contenedor.querySelector('span._3kmrz08e')?.innerText.trim() || '1';
-
-                // 📏 Convertir cantidad a número
-                let cantidadNumerica = parseInt(cantidad.replace(/\D/g, ''), 10); // Quita todo excepto números
-                if (isNaN(cantidadNumerica) || cantidadNumerica <= 0) cantidadNumerica = 1; // Si no es válida, poner 1
-
-                // 📌 Agregar el producto al array
+                let cantidadNumerica = parseInt(cantidad.replace(/\D/g, ''), 10);
+                if (isNaN(cantidadNumerica) || cantidadNumerica <= 0) cantidadNumerica = 1;
+        
                 productosArray.push({
                     Descripcion: descripcion,
-                    Precio: precioNumerico,
+                    Precio: precioEntero,
                     ColorTalla: textoColorTalla,
                     Cantidad: cantidadNumerica
                 });
             });
-
+        
             return productosArray;
         });
-
+        
         if (productos.length === 0) {
             console.log("❌ No se encontraron productos.");
             return;
@@ -116,24 +106,6 @@ async function extraerInfoYGuardar() {
             await browser.close();
         }
     }
-}
-
-function obtenerColorYTalla(texto) {
-    let color = "Sin color";
-    let talla = "Sin talla";
-
-    if (texto) {
-        const partes = texto.split("/").map(t => t.trim());
-
-        if (partes.length >= 2) {
-            color = partes[0];  // "Rosa roja"
-            talla = partes[1].replace("Tamaño de etiqueta:", "").trim();  // Elimina "Tamaño de etiqueta:" y recorta espacios
-        } else {
-            color = texto.trim(); // Si no hay "/", todo el contenido es el color
-        }
-    }
-
-    return { color, talla };
 }
 
 // Exportar la función para usarla en app.js

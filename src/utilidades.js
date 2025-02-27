@@ -3,12 +3,30 @@ import path from 'path';
 import axios from 'axios';
 
 // Función para obtener color y talla
-export function obtenerColorYTalla(texto) {
+/*export function obtenerColorYTalla(texto) {
     if (texto.includes('/')) {
         const [color, talla] = texto.split('/').map(t => t.trim());
         return { color, talla };
     }
     return { color: texto.trim(), talla: "" };
+}
+*/
+export function obtenerColorYTalla(texto) {
+    let color = "Sin color";
+    let talla = "Sin talla";
+
+    if (texto) {
+        const partes = texto.split("/").map(t => t.trim());
+
+        if (partes.length >= 2) {
+            color = partes[0];  // "Rosa roja"
+            talla = partes[1].replace("Tamaño de etiqueta:", "").trim();  // Elimina "Tamaño de etiqueta:" y recorta espacios
+        } else {
+            color = texto.trim(); // Si no hay "/", todo el contenido es el color
+        }
+    }
+
+    return { color, talla };
 }
 
 export async function getImageUrls(page, selector) {
@@ -62,3 +80,4 @@ export async function downloadImages(imageUrls, folderPath) {
         console.log("✅ Todas las imágenes se descargaron correctamente.");
     }
 }
+

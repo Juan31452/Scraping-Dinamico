@@ -1,7 +1,6 @@
 import puppeteer from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
-//import axios from 'axios';
 import extraerInfoYGuardar from './BuscaInfo.js';
 import { getImageUrls, downloadImages } from './utilidades.js';
 
@@ -37,7 +36,7 @@ if (!fs.existsSync(folderPath)) {
             await downloadImages(imageUrls,folderPath);
             // Ejecutar el scraping de BuscaInfo.js después de descargar las imágenes
             console.log("🔍 Ejecutando scraping...");
-            await extraerInfoYGuardar(page); // Pasar la instancia de `page` si es necesario
+            await extraerInfoYGuardar(page,filePath); // Pasar la instancia de `page` si es necesario
             console.log("✅ Proceso completado.");
         }
     } catch (error) {
