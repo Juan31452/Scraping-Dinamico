@@ -2,15 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 
-// Función para obtener color y talla
-/*export function obtenerColorYTalla(texto) {
-    if (texto.includes('/')) {
-        const [color, talla] = texto.split('/').map(t => t.trim());
-        return { color, talla };
-    }
-    return { color: texto.trim(), talla: "" };
-}
-*/
 export function obtenerColorYTalla(texto) {
     let color = "Sin color";
     let talla = "Sin talla";
