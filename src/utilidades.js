@@ -43,7 +43,7 @@ export async function downloadImages(imageUrls, folderPath) {
 
     for (let i = 0; i < imageUrls.length; i++) {
         const imageUrl = imageUrls[i];
-        const imagePath = path.join(folderPath, `imagen_${i + 1}.jpg`);
+        const imagePath = path.join(folderPath, `Img${i + 1}.jpg`);
 
         try {
             const response = await axios({
@@ -72,3 +72,8 @@ export async function downloadImages(imageUrls, folderPath) {
     }
 }
 
+let contadorImagenes = 1; // Variable global para llevar el conteo
+
+export function generarNombreImagen() {
+    return `img${contadorImagenes++}`;
+}

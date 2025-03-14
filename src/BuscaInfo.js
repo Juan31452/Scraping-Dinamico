@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import xlsx from 'xlsx';
-import { obtenerColorYTalla } from './utilidades.js';
+import { obtenerColorYTalla,generarNombreImagen } from './utilidades.js';
 
 const excelPath = path.resolve('C:/Users/acer/Desktop/CopiaUsb/productos.xlsx');
 
@@ -24,7 +24,12 @@ async function extraerInfoYGuardar(page, url) {
                 const textoColorTalla = contenedor.querySelector('span._2mokkSXY')?.innerText.trim() || 'No especificado';
                 let cantidad = parseInt(contenedor.querySelector('span._3kmrz08e')?.innerText.replace(/\D/g, ''), 10) || 1;
 
-                return { Descripcion: descripcion, Precio: precioEntero, ColorTalla: textoColorTalla, Cantidad: cantidad };
+                return { Descripcion: descripcion,
+                         ColorTalla: textoColorTalla, 
+                         Cantidad: cantidad,
+                         Precio: precioEntero 
+                         
+                        };
             });
         });
 
@@ -38,6 +43,8 @@ async function extraerInfoYGuardar(page, url) {
             const { color, talla } = obtenerColorYTalla(producto.ColorTalla);
             Object.assign(producto, { Color: color, Talla: talla });
             delete producto.ColorTalla;
+            // Asignar nombre secuencial a la imagen
+            producto.Imagen = generarNombreImagen();        
         });
 
         let workbook, worksheet;
@@ -48,7 +55,7 @@ async function extraerInfoYGuardar(page, url) {
             worksheet = workbook.Sheets[sheetName] || xlsx.utils.json_to_sheet([]);
         } else {
             workbook = xlsx.utils.book_new();
-            worksheet = xlsx.utils.json_to_sheet([["Descripcion", "Precio", "Color", "Talla", "Cantidad"]]);
+            worksheet = xlsx.utils.json_to_sheet([["Descripcion", "Talla", "Color", "Cantidad", "Precio"]]);
             xlsx.utils.book_append_sheet(workbook, worksheet, sheetName);
         }
 
@@ -57,7 +64,7 @@ async function extraerInfoYGuardar(page, url) {
         productos.forEach(producto => {
             const existeProducto = data.some(row => row[0] === producto.Descripcion && row[1] === producto.Precio);
             if (!existeProducto) {
-                data.push([producto.Descripcion, producto.Precio, producto.Color, producto.Talla, producto.Cantidad]);
+                data.push([producto.Descripcion, producto.Talla, producto.Color, producto.Cantidad, producto.Precio ]);
             }
         });
 
