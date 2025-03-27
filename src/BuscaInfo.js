@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import xlsx from 'xlsx';
-import { obtenerColorYTalla,generarNombreImagen } from './utilidades.js';
+import { obtenerColorYTalla,generarNombreImagen,crearCodigo } from './utilidades.js';
 
 const excelPath = path.resolve('C:/Users/acer/Desktop/CopiaUsb/productos.xlsx');
 
@@ -24,7 +24,8 @@ async function extraerInfoYGuardar(page, url) {
                 const textoColorTalla = contenedor.querySelector('span._2mokkSXY')?.innerText.trim() || 'No especificado';
                 let cantidad = parseInt(contenedor.querySelector('span._3kmrz08e')?.innerText.replace(/\D/g, ''), 10) || 1;
 
-                return { Descripcion: descripcion,
+                return { 
+                         Descripcion: descripcion,
                          ColorTalla: textoColorTalla, 
                          Cantidad: cantidad,
                          Precio: precioEntero 
@@ -38,13 +39,20 @@ async function extraerInfoYGuardar(page, url) {
             return;
         }
         console.log(`✅ Se encontraron ${productos.length} productos.`);
+        
+        const contador = crearCodigo(10); // Creamos un nuevo contador independiente
+        const numero = generarNombreImagen(10);
 
         productos.forEach(producto => {
             const { color, talla } = obtenerColorYTalla(producto.ColorTalla);
             Object.assign(producto, { Color: color, Talla: talla });
             delete producto.ColorTalla;
+            // asignar Id al producto
+            producto.IdProducto = contador();
             // Asignar nombre secuencial a la imagen
-            producto.Imagen = generarNombreImagen();        
+            producto.Imagen = numero();
+            producto.Categoria = "Sin categoría" // Valor por defecto, puedes cambiarlo dinámicamente
+        
         });
 
         let workbook, worksheet;
@@ -55,7 +63,7 @@ async function extraerInfoYGuardar(page, url) {
             worksheet = workbook.Sheets[sheetName] || xlsx.utils.json_to_sheet([]);
         } else {
             workbook = xlsx.utils.book_new();
-            worksheet = xlsx.utils.json_to_sheet([["Descripcion", "Talla", "Color", "Cantidad", "Precio"]]);
+            worksheet = xlsx.utils.json_to_sheet([["IdProducto","Descripcion", "Talla", "Color", "Cantidad", "Precio", "Categoria"]]);
             xlsx.utils.book_append_sheet(workbook, worksheet, sheetName);
         }
 
@@ -64,7 +72,7 @@ async function extraerInfoYGuardar(page, url) {
         productos.forEach(producto => {
             const existeProducto = data.some(row => row[0] === producto.Descripcion && row[1] === producto.Precio);
             if (!existeProducto) {
-                data.push([producto.Descripcion, producto.Talla, producto.Color, producto.Cantidad, producto.Precio ]);
+                data.push([producto.IdProducto,producto.Descripcion, producto.Talla, producto.Color, producto.Cantidad, producto.Precio,producto.Categoria ]);
             }
         });
 

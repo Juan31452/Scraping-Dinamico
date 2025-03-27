@@ -2,6 +2,27 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 
+let contadorImagenes = 1; // Variable global para llevar el conteo 
+
+export function generarNombreImagen(numeroAdicional) {
+    let contador = 0;
+    
+    return function() {
+        contador++;
+      
+      return `/assets/Pedido${numeroAdicional}/img${contadorImagenes++}.jpg`;
+    };
+}
+
+export function crearCodigo(numeroAdicional) {
+    let contador = 0;
+  
+    return function() {
+      contador++;
+      return `${numeroAdicional}.${contador}`;
+    };
+}
+
 export function obtenerColorYTalla(texto) {
     let color = "Sin color";
     let talla = "Sin talla";
@@ -43,7 +64,7 @@ export async function downloadImages(imageUrls, folderPath) {
 
     for (let i = 0; i < imageUrls.length; i++) {
         const imageUrl = imageUrls[i];
-        const imagePath = path.join(folderPath, `Img${i + 1}.jpg`);
+        const imagePath = path.join(folderPath, `img${i + 1}.jpg`);
 
         try {
             const response = await axios({
@@ -72,8 +93,3 @@ export async function downloadImages(imageUrls, folderPath) {
     }
 }
 
-let contadorImagenes = 1; // Variable global para llevar el conteo
-
-export function generarNombreImagen() {
-    return `img${contadorImagenes++}`;
-}
