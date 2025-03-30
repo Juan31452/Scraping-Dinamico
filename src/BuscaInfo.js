@@ -55,35 +55,52 @@ async function extraerInfoYGuardar(page, url) {
         
         });
 
-        let workbook, worksheet;
-        const sheetName = "Productos";
+        guardarEnExcel(productos, excelPath);
+        guardarEnJson(productos, excelPath);
+        
+        // Función para guardar en Excel
+        function guardarEnExcel(productos, excelPath) {
+            let workbook, worksheet;
+            const sheetName = "Productos";
 
-        if (fs.existsSync(excelPath)) {
-            workbook = xlsx.readFile(excelPath);
-            worksheet = workbook.Sheets[sheetName] || xlsx.utils.json_to_sheet([]);
-        } else {
-            workbook = xlsx.utils.book_new();
-            worksheet = xlsx.utils.json_to_sheet([["IdProducto","Descripcion", "Talla", "Color", "Cantidad", "Precio", "Categoria"]]);
-            xlsx.utils.book_append_sheet(workbook, worksheet, sheetName);
+            if (fs.existsSync(excelPath)) {
+                workbook = xlsx.readFile(excelPath);
+                worksheet = workbook.Sheets[sheetName] || xlsx.utils.json_to_sheet([]);
+            } else {
+                workbook = xlsx.utils.book_new();
+                worksheet = xlsx.utils.json_to_sheet([["IdProducto", "Descripcion", "Talla", "Color", "Cantidad", "Precio", "Categoria", "Imagen"]]);
+                xlsx.utils.book_append_sheet(workbook, worksheet, sheetName);
+            }
+
+            let data = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+
+            productos.forEach(producto => {
+                const existeProducto = data.some(row => row[1] === producto.descripcion && row[4] === producto.precio);
+                if (!existeProducto) {
+                    data.push([
+                        producto.idProducto, producto.descripcion, producto.talla, producto.color, 
+                        producto.cantidad, producto.precio, producto.categoria, producto.imagen
+                    ]);
+                }
+            });
+
+            workbook.Sheets[sheetName] = xlsx.utils.aoa_to_sheet(data);
+            xlsx.writeFile(workbook, excelPath);
+            console.log(`✅ Datos guardados en: ${excelPath}`);
         }
 
-        let data = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+        // Función para guardar en JSON
+        function guardarEnJson(productos, excelPath) {
+            const jsonPath = path.join(path.dirname(excelPath), 'products.json');
+            let productosPrevios = fs.existsSync(jsonPath) ? JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) : [];
 
-        productos.forEach(producto => {
-            const existeProducto = data.some(row => row[0] === producto.Descripcion && row[1] === producto.Precio);
-            if (!existeProducto) {
-                data.push([producto.IdProducto,producto.Descripcion, producto.Talla, producto.Color, producto.Cantidad, producto.Precio,producto.Categoria ]);
-            }
-        });
+            const productosUnicos = productos.filter(producto => 
+                !productosPrevios.some(p => p.descripcion === producto.descripcion && p.precio === producto.precio)
+            );
 
-        workbook.Sheets[sheetName] = xlsx.utils.aoa_to_sheet(data);
-        xlsx.writeFile(workbook, excelPath);
-        console.log(`✅ Datos guardados en: ${excelPath}`);
-
-        const jsonPath = path.join(path.dirname(excelPath), 'products.json');
-        let productosPrevios = fs.existsSync(jsonPath) ? JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) : [];
-        fs.writeFileSync(jsonPath, JSON.stringify([...productosPrevios, ...productos], null, 2), 'utf-8');
-        console.log(`✅ Archivo JSON guardado en: ${jsonPath}`);
+            fs.writeFileSync(jsonPath, JSON.stringify([...productosPrevios, ...productosUnicos], null, 2), 'utf-8');
+            console.log(`✅ Archivo JSON guardado en: ${jsonPath}`);
+        }
 
     } catch (error) {
         console.error("❌ Error en el proceso:", error);

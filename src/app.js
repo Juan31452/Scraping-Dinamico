@@ -4,47 +4,84 @@ import fs from 'fs';
 import extraerInfoYGuardar from './BuscaInfo.js';
 import { getImageUrls, downloadImages } from './utilidades.js';
 
-// Ruta del archivo HTML
-const filePath = `file://${path.resolve('C:/Users/acer/Desktop/CopiaUsb/Temu _ Detalles del pedido.html')}`;
+class Scraper {
+    constructor(filePath, folderPath) {
+        this.filePath = `file://${path.resolve(filePath)}`;
+        this.folderPath = path.resolve(folderPath);
+        this.browser = null;
+        this.page = null;
+    }
 
-// Ruta de la carpeta donde se guardarán las imágenes
-const folderPath = path.resolve('C:/Users/acer/Desktop/CopiaUsb/imagenes');
-
-// Crear la carpeta "imagenes" si no existe
-if (!fs.existsSync(folderPath)) {
-    fs.mkdirSync(folderPath, { recursive: true });
-}
-
-(async () => {
-    let browser;
-    try {
-        // Iniciar Puppeteer
-        browser = await puppeteer.launch({ headless: true });
-        const page = await browser.newPage();
-
-        // Cargar la página localmente
-        await page.goto(filePath, { waitUntil: 'domcontentloaded' });
-
-        const selector = 'div.tzNi1YuM'; // Puedes cambiar el selector según la necesidad
-        const imageUrls = await getImageUrls(page,selector);
-        
-        if (imageUrls.length === 0) {
-            console.log('No se encontraron imágenes en el div tzNi1YuM.');
-        } else {
-            console.log(`Se encontraron ${imageUrls.length} imágenes. Descargando...`);
-            // Descargar imágenes
-            await downloadImages(imageUrls,folderPath);
-            // Ejecutar el scraping de BuscaInfo.js después de descargar las imágenes
-            console.log("🔍 Ejecutando scraping...");
-            await extraerInfoYGuardar(page,filePath); // Pasar la instancia de `page` si es necesario
-            console.log("✅ Proceso completado.");
-        }
-    } catch (error) {
-        console.error("❌ Error en el proceso:", error);
-    } finally {
-        // Cerrar el navegador al finalizar
-        if (browser) {
-            await browser.close();
+    async init() {
+        try {
+            this.browser = await puppeteer.launch({ headless: true });
+            this.page = await this.browser.newPage();
+            console.log("🌐 Navegador iniciado.");
+        } catch (error) {
+            console.error("❌ Error al iniciar Puppeteer:", error);
         }
     }
-})();
+
+    async loadPage() {
+        try {
+            console.log("📄 Cargando la página...");
+            await this.page.goto(this.filePath, { waitUntil: 'domcontentloaded' });
+        } catch (error) {
+            console.error("❌ Error al cargar la página:", error);
+        }
+    }
+
+    async scrapeImages(selector) {
+        try {
+            console.log("🔍 Buscando imágenes...");
+            const imageUrls = await getImageUrls(this.page, selector);
+
+            if (imageUrls.length === 0) {
+                console.log("⚠️ No se encontraron imágenes.");
+                return [];
+            }
+
+            console.log(`🖼️ Se encontraron ${imageUrls.length} imágenes. Descargando...`);
+            await downloadImages(imageUrls, this.folderPath);
+            console.log("✅ Imágenes descargadas correctamente.");
+            return imageUrls;
+        } catch (error) {
+            console.error("❌ Error al extraer imágenes:", error);
+            return [];
+        }
+    }
+
+    async scrapeData() {
+        try {
+            console.log("📊 Extrayendo información del HTML...");
+            await extraerInfoYGuardar(this.page, this.filePath);
+            console.log("✅ Información extraída correctamente.");
+        } catch (error) {
+            console.error("❌ Error al extraer información:", error);
+        }
+    }
+
+    async close() {
+        if (this.browser) {
+            await this.browser.close();
+            console.log("🛑 Navegador cerrado.");
+        }
+    }
+
+    async run(selector) {
+        await this.init();
+        await this.loadPage();
+        await this.scrapeImages(selector);
+        await this.scrapeData();
+        await this.close();
+    }
+}
+
+// ----------------------
+// 🔹 **Uso de la Clase**
+// ----------------------
+const filePath = 'C:/Users/acer/Desktop/CopiaUsb/Temu _ Detalles del pedido.html';
+const folderPath = 'C:/Users/acer/Desktop/CopiaUsb/imagenes';
+const scraper = new Scraper(filePath, folderPath);
+
+scraper.run('div.tzNi1YuM');

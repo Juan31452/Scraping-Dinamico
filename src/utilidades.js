@@ -42,18 +42,27 @@ export function obtenerColorYTalla(texto) {
 }
 
 export async function getImageUrls(page, selector) {
-    return await page.evaluate((selector) => {
-        const container = document.querySelector(selector); 
-        if (!container) return []; 
+    try {
+        return await page.evaluate((selector) => {
+            const container = document.querySelector(selector);
+            if (!container) return [];
 
-        return Array.from(container.querySelectorAll('img'))
-            .map(img => img.src?.trim())
-            .filter(src => src)
-            .map(src => src.startsWith('http') ? src : `${window.location.origin}${src}`);
-    }, selector);
+            const urls = Array.from(container.querySelectorAll('img'))
+                .map(img => img.src?.trim())
+                .filter(src => src) // Filtra nulos o vacíos
+                .map(src => src.startsWith('http') ? src : `${window.location.origin}${src}`);
+
+            return Array.from(new Set(urls)); // Elimina duplicados
+        }, selector);
+    } catch (error) {
+        console.error(`❌ Error al extraer imágenes:`, error);
+        return []; // Devuelve un array vacío en caso de error
+    }
 }
 
 // Función para descargar imágenes
+let imageCounter = 1; // Contador global para imágenes
+
 export async function downloadImages(imageUrls, folderPath) {
     let errorCount = 0;
 
@@ -62,11 +71,12 @@ export async function downloadImages(imageUrls, folderPath) {
         fs.mkdirSync(folderPath, { recursive: true });
     }
 
-    for (let i = 0; i < imageUrls.length; i++) {
-        const imageUrl = imageUrls[i];
-        const imagePath = path.join(folderPath, `img${i + 1}.jpg`);
-
+    const downloadPromises = imageUrls.map(async (imageUrl) => {
         try {
+            // Obtener extensión de la imagen (por defecto .jpg si no tiene)
+            const ext = path.extname(new URL(imageUrl).pathname) || '.jpg';
+            const imagePath = path.join(folderPath, `img${imageCounter++}${ext}`);
+
             const response = await axios({
                 url: imageUrl,
                 responseType: 'stream',
@@ -79,17 +89,15 @@ export async function downloadImages(imageUrls, folderPath) {
                 writer.on('error', reject);
             });
 
-            console.log(`Imagen guardada: ${imagePath}`);
+            console.log(`✅ Imagen guardada: ${imagePath}`);
         } catch (error) {
             errorCount++;
-            console.log(`Error al descargar la imagen ${imageUrl}:`, error.message);
+            console.log(`❌ Error al descargar ${imageUrl}:`, error.message);
         }
-    }
+    });
 
-    if (errorCount > 0) {
-        console.log(`✅ Descarga completada con ${errorCount} errores.`);
-    } else {
-        console.log("✅ Todas las imágenes se descargaron correctamente.");
-    }
+    // Esperar que todas las descargas terminen
+    await Promise.all(downloadPromises);
+
+    console.log(`✅ Descarga completada con ${errorCount} errores.`);
 }
-
