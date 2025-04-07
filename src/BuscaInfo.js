@@ -1,7 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import xlsx from 'xlsx';
-import { obtenerColorYTalla,generarNombreImagen,crearCodigo } from './utilidades.js';
+import { obtenerColorYTalla,generarNombreImagen,crearCodigo,buscarCategoria,guardarEnJson,guardarEnExcel,guardarEnJsonModificado } from './utilidades.js';
 
 const excelPath = path.resolve('C:/Users/acer/Desktop/CopiaUsb/productos.xlsx');
 
@@ -40,8 +39,8 @@ async function extraerInfoYGuardar(page, url) {
         }
         console.log(`✅ Se encontraron ${productos.length} productos.`);
         
-        const contador = crearCodigo(10); // Creamos un nuevo contador independiente
-        const numero = generarNombreImagen(10);
+        const contador = crearCodigo(11); // Creamos un nuevo contador independiente
+        const numero = generarNombreImagen(11);
 
         productos.forEach(producto => {
             const { color, talla } = obtenerColorYTalla(producto.ColorTalla);
@@ -51,56 +50,14 @@ async function extraerInfoYGuardar(page, url) {
             producto.IdProducto = contador();
             // Asignar nombre secuencial a la imagen
             producto.Imagen = numero();
-            producto.Categoria = "Sin categoría" // Valor por defecto, puedes cambiarlo dinámicamente
-        
+            producto.Categoria = buscarCategoria(producto.Descripcion) // Asignar categoría según la descripción
+            producto.Estado = "Disponible"
         });
 
         guardarEnExcel(productos, excelPath);
         guardarEnJson(productos, excelPath);
-        
-        // Función para guardar en Excel
-        function guardarEnExcel(productos, excelPath) {
-            let workbook, worksheet;
-            const sheetName = "Productos";
-
-            if (fs.existsSync(excelPath)) {
-                workbook = xlsx.readFile(excelPath);
-                worksheet = workbook.Sheets[sheetName] || xlsx.utils.json_to_sheet([]);
-            } else {
-                workbook = xlsx.utils.book_new();
-                worksheet = xlsx.utils.json_to_sheet([["IdProducto", "Descripcion", "Talla", "Color", "Cantidad", "Precio", "Categoria", "Imagen"]]);
-                xlsx.utils.book_append_sheet(workbook, worksheet, sheetName);
-            }
-
-            let data = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
-
-            productos.forEach(producto => {
-                const existeProducto = data.some(row => row[1] === producto.descripcion && row[4] === producto.precio);
-                if (!existeProducto) {
-                    data.push([
-                        producto.idProducto, producto.descripcion, producto.talla, producto.color, 
-                        producto.cantidad, producto.precio, producto.categoria, producto.imagen
-                    ]);
-                }
-            });
-
-            workbook.Sheets[sheetName] = xlsx.utils.aoa_to_sheet(data);
-            xlsx.writeFile(workbook, excelPath);
-            console.log(`✅ Datos guardados en: ${excelPath}`);
-        }
-
-        // Función para guardar en JSON
-        function guardarEnJson(productos, excelPath) {
-            const jsonPath = path.join(path.dirname(excelPath), 'products.json');
-            let productosPrevios = fs.existsSync(jsonPath) ? JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) : [];
-
-            const productosUnicos = productos.filter(producto => 
-                !productosPrevios.some(p => p.descripcion === producto.descripcion && p.precio === producto.precio)
-            );
-
-            fs.writeFileSync(jsonPath, JSON.stringify([...productosPrevios, ...productosUnicos], null, 2), 'utf-8');
-            console.log(`✅ Archivo JSON guardado en: ${jsonPath}`);
-        }
+        guardarEnJsonModificado(productos,excelPath)   
+    
 
     } catch (error) {
         console.error("❌ Error en el proceso:", error);
