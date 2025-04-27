@@ -1,7 +1,8 @@
 import puppeteer from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
-import extraerInfoYGuardar from './BuscaInfo.js';
+//import extraerInfoYGuardar from './BuscaInfo.js';
+import ExtractorProductos from './BuscaInfo.js'
 import { getImageUrls, downloadImages } from './utilidades.js';
 
 class Scraper {
@@ -46,7 +47,7 @@ class Scraper {
             console.log("✅ Imágenes descargadas correctamente.");
             return imageUrls;
         } catch (error) {
-            console.error("❌ Error al extraer imágenes:", error);
+            console.aerror("❌ Error al extraer imágenes:", error);
             return [];
         }
     }
@@ -54,7 +55,11 @@ class Scraper {
     async scrapeData() {
         try {
             console.log("📊 Extrayendo información del HTML...");
-            await extraerInfoYGuardar(this.page, this.filePath);
+            
+            const extractor = new ExtractorProductos(this.page, this.folderPath);
+            await extractor.extraerDesdeDetalles(`file://${path.resolve(filePath)}`);
+            //await extractor.extraerDesdeCompartido(`file://${path.resolve(filePath)}`);
+        
             console.log("✅ Información extraída correctamente.");
         } catch (error) {
             console.error("❌ Error al extraer información:", error);
@@ -81,7 +86,9 @@ class Scraper {
 // 🔹 **Uso de la Clase**
 // ----------------------
 const filePath = 'C:/Users/acer/Desktop/CopiaUsb/Temu _ Detalles del pedido.html';
+//const filePath = 'C:/Users/acer/Desktop/CopiaUsb/Comparte tu pedido.html'; 
 const folderPath = 'C:/Users/acer/Desktop/CopiaUsb/imagenes';
 const scraper = new Scraper(filePath, folderPath);
 
-scraper.run('div.tzNi1YuM');
+scraper.run('div.UAf3hJs7');
+//scraper.run('div._2Gi6VXJg');

@@ -49,14 +49,20 @@ export async function getImageUrls(page, selector) {
 
             const urls = Array.from(container.querySelectorAll('img'))
                 .map(img => img.src?.trim())
-                .filter(src => src) // Filtra nulos o vacíos
-                .map(src => src.startsWith('http') ? src : `${window.location.origin}${src}`);
+                .filter(src => src)
+                .map(src => {
+                    if (src.startsWith('http') || src.startsWith('file://')) {
+                        return src;
+                    }
+                    const base = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    return `${base}/${src.replace(/^\/+/, '')}`;
+                });
 
-            return Array.from(new Set(urls)); // Elimina duplicados
+            return Array.from(new Set(urls));
         }, selector);
     } catch (error) {
         console.error(`❌ Error al extraer imágenes:`, error);
-        return []; // Devuelve un array vacío en caso de error
+        return [];
     }
 }
 
@@ -139,7 +145,7 @@ export function buscarCategoria(descripcion) {
         } else {
             // Crear un nuevo libro de trabajo si no existe
             workbook = xlsx.utils.book_new();
-            worksheet = xlsx.utils.json_to_sheet([["IdProducto", "Estado", "Descripcion", "Talla", "Color", "Cantidad", "Precio", "Categoria", "Imagen"]]);
+            worksheet = xlsx.utils.json_to_sheet([["IdProducto", "Descripcion", "Talla", "Color", "Cantidad", "Precio", "Categoria", "Imagen", "Estado"]]);
             xlsx.utils.book_append_sheet(workbook, worksheet, sheetName);
         }
     
@@ -165,27 +171,27 @@ export function buscarCategoria(descripcion) {
         xlsx.writeFile(workbook, excelPath);
         console.log(`✅ Datos guardados en Excel en: ${excelPath}`);
     }
-    
+        
     // Función para guardar en JSON con precios a 0
-export function guardarEnJsonModificado(productos, excelPath) {
-    const jsonPath = path.join(path.dirname(excelPath), 'products_modified.json');
-    let productosPrevios = fs.existsSync(jsonPath) ? JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) : [];
+    export function guardarEnJsonModificado(productos, excelPath) {
+        const jsonPath = path.join(path.dirname(excelPath), 'products_modified.json');
+        let productosPrevios = fs.existsSync(jsonPath) ? JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) : [];
 
-    // Modificar los productos estableciendo precio a 0
-    const productosModificados = productos.map(producto => ({
-        ...producto,
-        Precio: 0  // Establecemos el precio a 0
-    }));
+        // Modificar los productos estableciendo precio a 0
+        const productosModificados = productos.map(producto => ({
+            ...producto,
+            Precio: 0  // Establecemos el precio a 0
+        }));
 
-    // Filtrar productos únicos (comparando descripción y otros campos excepto precio)
-    const productosUnicos = productosModificados.filter(producto => 
-        !productosPrevios.some(p => 
-            p.Descripcion === producto.Descripcion && 
-            p.Color === producto.Color && 
-            p.Talla === producto.Talla
-        )
-    );
+        // Filtrar productos únicos (comparando descripción y otros campos excepto precio)
+        const productosUnicos = productosModificados.filter(producto => 
+            !productosPrevios.some(p => 
+                p.Descripcion === producto.Descripcion && 
+                p.Color === producto.Color && 
+                p.Talla === producto.Talla
+            )
+        );
 
-    fs.writeFileSync(jsonPath, JSON.stringify([...productosPrevios, ...productosUnicos], null, 2), 'utf-8');
-    console.log(`✅ Archivo JSON modificado (precios a 0) guardado en: ${jsonPath}`);
-}
+        fs.writeFileSync(jsonPath, JSON.stringify([...productosPrevios, ...productosUnicos], null, 2), 'utf-8');
+        console.log(`✅ Archivo JSON modificado (precios a 0) guardado en: ${jsonPath}`);
+    }
