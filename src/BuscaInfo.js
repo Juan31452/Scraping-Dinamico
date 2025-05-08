@@ -3,14 +3,19 @@ import fs from 'fs';
 import { obtenerColorYTalla,generarNombreImagen,crearCodigo,buscarCategoria,guardarEnJson,guardarEnExcel,guardarEnJsonModificado } from './utilidades.js';
 
 const excelPath = path.resolve('C:/Users/acer/Desktop/CopiaUsb/productos.xlsx');
-
+const numerodeCodigo = 17; //numero para generar codigo de producto
 
 class ExtractorProductos {
-    constructor(page, excelPath) {
+    constructor(page, excelPath,numeroDeCodigo = 17) {
+        if (!page) throw new Error("Se requiere instancia de página");
+        if (!excelPath) throw new Error("Se requiere ruta de archivo Excel");
+        
         this.page = page;
-        this.excelPath = excelPath;
-        this.contador = crearCodigo(9);
-        this.nombreImagen = generarNombreImagen(9);
+        this.excelPath = path.resolve(excelPath);
+        this.numeroDeCodigo = numeroDeCodigo; // Guardar el número de código
+        this.contador = crearCodigo(numerodeCodigo);
+        this.nombreImagen = generarNombreImagen(numerodeCodigo);
+        
     }
 
     parsearPrecio(textoPrecio) {
@@ -29,7 +34,7 @@ class ExtractorProductos {
                 IdProducto: this.contador(),
                 Imagen: this.nombreImagen(),
                 Categoria: buscarCategoria(producto.Descripcion),
-                Estado: "Disponible"
+                Estado: "Nuevo"
             });
             delete producto.ColorTalla;
         });
@@ -72,20 +77,23 @@ class ExtractorProductos {
     }
 
     async extraerDesdeCompartido(url) {
+
         try {
+             console.log("URL compartido:", url);
             await this.page.goto(url, { waitUntil: 'domcontentloaded' });
 
             const productos = await this.page.evaluate(() => {
-                return [...document.querySelectorAll('div._26spr4RE')].map(el => {
-                    const descripcion = el.querySelector('div._1NCW7dDF')?.innerText.trim() || 'Sin descripción';
-                    const especificaciones = el.querySelector('div._2_zF0YRu')?.innerText.trim() || 'No especificado';
-                    const textoPrecio = el.querySelector('div._36rm6rjg')?.innerText.trim() || '0';
+                return [...document.querySelectorAll('div._26spr4RE')].map(contenedor => {
+                    const descripcion = contenedor.querySelector('div._1NCW7dDF')?.innerText.trim() || 'Sin descripción';
+                    const especificaciones = contenedor.querySelector('div._2_zF0YRu')?.innerText.trim() || 'No especificado';
+                    const textoPrecio = contenedor.querySelector('div._36rm6rjg')?.innerText.trim() || '0';
+                    const cantidad = parseInt(contenedor.querySelector('span._3kmrz08e')?.innerText.replace(/\D/g, ''), 10) || 1;
                     const precio = parseInt(textoPrecio.replace(/\D/g, ''), 10) || 0;
 
                     return {
                         Descripcion: descripcion,
                         ColorTalla: especificaciones,
-                        Cantidad: 1,
+                        Cantidad: cantidad,
                         Precio: precio
                     };
                 });

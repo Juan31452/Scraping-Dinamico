@@ -69,8 +69,10 @@ export async function getImageUrls(page, selector) {
 // Función para descargar imágenes
 let imageCounter = 1; // Contador global para imágenes
 
+
 export async function downloadImages(imageUrls, folderPath) {
     let errorCount = 0;
+    let imageCounter = 1;
 
     // Crear la carpeta si no existe
     if (!fs.existsSync(folderPath)) {
@@ -102,7 +104,6 @@ export async function downloadImages(imageUrls, folderPath) {
         }
     });
 
-    // Esperar que todas las descargas terminen
     await Promise.all(downloadPromises);
 
     console.log(`✅ Descarga completada con ${errorCount} errores.`);
