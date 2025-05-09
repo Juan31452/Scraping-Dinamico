@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import xlsx from 'xlsx';
+import { fileURLToPath } from 'url';
 
 let contadorImagenes = 1; // Variable global para llevar el conteo 
 
@@ -47,16 +48,25 @@ export async function getImageUrls(page, selector) {
             const container = document.querySelector(selector);
             if (!container) return [];
 
-            const urls = Array.from(container.querySelectorAll('img'))
-                .map(img => img.src?.trim())
-                .filter(src => src)
-                .map(src => {
+            const images = Array.from(container.querySelectorAll('img'));
+            const base = new URL('.', window.location.href).href;
+
+            const urls = images.map(img => {
+                let src = img.src?.trim();
+                if (!src) return null;
+
+                try {
+                    // Si es absoluta (http:// o file://), la usamos tal cual
                     if (src.startsWith('http') || src.startsWith('file://')) {
                         return src;
                     }
-                    const base = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                    return `${base}/${src.replace(/^\/+/, '')}`;
-                });
+
+                    // Si es relativa, resolvemos contra la URL base
+                    return new URL(src, base).href;
+                } catch {
+                    return null;
+                }
+            }).filter(Boolean);
 
             return Array.from(new Set(urls));
         }, selector);
@@ -69,43 +79,48 @@ export async function getImageUrls(page, selector) {
 // Función para descargar imágenes
 let imageCounter = 1; // Contador global para imágenes
 
-
 export async function downloadImages(imageUrls, folderPath) {
     let errorCount = 0;
     let imageCounter = 1;
 
-    // Crear la carpeta si no existe
     if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
     }
 
     const downloadPromises = imageUrls.map(async (imageUrl) => {
         try {
-            // Obtener extensión de la imagen (por defecto .jpg si no tiene)
             const ext = path.extname(new URL(imageUrl).pathname) || '.jpg';
             const imagePath = path.join(folderPath, `img${imageCounter++}${ext}`);
 
-            const response = await axios({
-                url: imageUrl,
-                responseType: 'stream',
-            });
+            if (imageUrl.startsWith('file://')) {
+                // ✅ Copiar archivo local directamente
+                const localPath = fileURLToPath(imageUrl); // convierte a ruta local usable
+                if (!fs.existsSync(localPath)) throw new Error("Archivo local no encontrado");
+                await fs.promises.copyFile(localPath, imagePath);
+                console.log(`📁 Copiado local: ${imagePath}`);
+            } else {
+                // 🌐 Descargar archivo remoto con axios
+                const response = await axios({
+                    url: imageUrl,
+                    responseType: 'stream',
+                });
 
-            await new Promise((resolve, reject) => {
-                const writer = fs.createWriteStream(imagePath);
-                response.data.pipe(writer);
-                writer.on('finish', resolve);
-                writer.on('error', reject);
-            });
+                await new Promise((resolve, reject) => {
+                    const writer = fs.createWriteStream(imagePath);
+                    response.data.pipe(writer);
+                    writer.on('finish', resolve);
+                    writer.on('error', reject);
+                });
 
-            console.log(`✅ Imagen guardada: ${imagePath}`);
+                console.log(`🌍 Descargado remoto: ${imagePath}`);
+            }
         } catch (error) {
             errorCount++;
-            console.log(`❌ Error al descargar ${imageUrl}:`, error.message);
+            console.log(`❌ Error al procesar ${imageUrl}:`, error.message);
         }
     });
 
     await Promise.all(downloadPromises);
-
     console.log(`✅ Descarga completada con ${errorCount} errores.`);
 }
 

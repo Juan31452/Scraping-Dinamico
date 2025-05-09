@@ -163,5 +163,3 @@ const selector1 = 'div._2Gi6VXJg'; // Selector para imágenes en "Comparte tu pe
 const scraper = new Scraper(filePath, folderPath);
 scraper.run(selector1)
     .catch(error => console.error("🔥 Error en el proceso principal:", error));
-
-scraper.run(selector1);
